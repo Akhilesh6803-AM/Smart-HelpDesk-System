@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Bot, ChevronDown, ChevronRight, Search, Plus, Minus } from 'lucide-react';
 import api from '../utils/api';
 
-const COLLEGE_NAME = "AMC ENGINEERING COLLEGE";
+const COLLEGE_NAME = "AMC ENGINEERING COLLEGE"; // (Replaced by dynamic org)
 
 // --- CUSTOM HOOKS ---
 
@@ -146,7 +146,8 @@ import { useAuth } from '../context/AuthContext';
 
 const HomePage = () => {
   const { user } = useAuth();
-  const { displayText: heroLine1, isTyping: isTyping1 } = useTypewriter("Your College", 60, 0);
+  const orgName = user?.organizationName || 'Your Organization';
+  const { displayText: heroLine1, isTyping: isTyping1 } = useTypewriter(orgName, 60, 0);
 
   const [notices, setNotices] = useState([]);
   const [loadingNotices, setLoadingNotices] = useState(true);
@@ -201,7 +202,10 @@ const HomePage = () => {
             >
               {/* College Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(99,102,241,0.12)] border border-[rgba(99,102,241,0.3)] text-[13px] font-semibold text-accent-text mb-5 tracking-wide">
-                🎓 {COLLEGE_NAME}
+                <span className="text-xl">
+                  {user?.organizationType === 'college' ? '🎓' : user?.organizationType === 'company' ? '🏢' : '🏫'}
+                </span>
+                {orgName}
               </div>
 
               <div className="flex justify-center lg:justify-start mb-4">
@@ -217,7 +221,12 @@ const HomePage = () => {
               </h1>
 
               <p className="text-[15px] text-gray-400 max-w-[480px] mx-auto lg:mx-0 mb-8 leading-relaxed">
-                Raise tickets, get instant AI solutions, track status in real time. Built for students, staff and administration.
+                Raise tickets, get instant AI solutions, track status in real time.{' '}
+                {user?.organizationType === 'college' 
+                  ? "Built for students, staff and administration." 
+                  : user?.organizationType === 'company'
+                  ? "Built for employees and management."
+                  : "Built for your organization."}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-6">
@@ -264,7 +273,7 @@ const HomePage = () => {
       {/* SECTION 3 - FEATURES */}
       <section id="features" className="relative z-10 max-w-7xl mx-auto px-4 py-[80px]">
         <SectionLabel text="What We Offer" />
-        <h2 className="text-3xl font-bold mb-2">Everything your college needs</h2>
+        <h2 className="text-3xl font-bold mb-2">Everything your organization needs</h2>
         <p className="text-[14px] text-[#7c6fa0] mb-12">One platform for all support needs</p>
 
         <motion.div 
@@ -807,16 +816,16 @@ className="space-y-4 mb-8"
         <div className="flex justify-center"><SectionLabel text="Ready to Start" /></div>
         <h2 className="text-[28px] sm:text-[36px] font-bold mb-4">Get instant support <span className="landing-gradient-text">right now</span></h2>
         <p className="text-[14px] text-accent-text max-w-[400px] mx-auto mb-8 leading-relaxed">
-          Join 1200+ students already using SmartDesk. Register with your USN and get started in seconds.
+          Join thousands already using SmartDesk. Register with your organization and get AI-powered support in seconds.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
           <Link to={user ? "/dashboard" : "/auth"} className="btn-primary w-full sm:w-auto">
-            {user ? "Go to Dashboard" : "Register as Student"}
+            {user ? "Go to Dashboard" : "Get Started Free"}
           </Link>
           {!user && (
             <Link to="/auth" className="btn-ghost w-full sm:w-auto">
-              Staff Login
+              Login
             </Link>
           )}
         </div>
@@ -840,7 +849,7 @@ className="space-y-4 mb-8"
               <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-xs">H</div>
               <span className="font-bold text-sm bg-clip-text text-transparent bg-gradient-to-br from-accent-text to-blue-400">SmartDesk</span>
             </div>
-            <p className="text-[11px] text-[#7c6fa0]">Smart Helpdesk System — {COLLEGE_NAME}</p>
+            <p className="text-[11px] text-[#7c6fa0]">Smart Helpdesk System — {orgName}</p>
           </div>
           
           <div className="hidden md:flex flex-col gap-2">
@@ -859,7 +868,7 @@ className="space-y-4 mb-8"
         </div>
         
         <div className="max-w-7xl mx-auto border-t border-[rgba(255,255,255,0.05)] pt-6 text-center">
-          <p className="text-[10px] text-[#3d3660]">© 2025 SmartDesk • {COLLEGE_NAME} • All rights reserved</p>
+          <p className="text-[10px] text-[#3d3660]">© 2025 SmartDesk • {orgName} • All rights reserved</p>
         </div>
       </footer>
     </div>

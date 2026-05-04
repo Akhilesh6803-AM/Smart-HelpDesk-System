@@ -21,8 +21,21 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'staff', 'admin'],
+    enum: ['student', 'staff', 'admin', 'employee'],
     required: [true, 'Role is required'],
+  },
+  organizationType: {
+    type: String,
+    enum: ['college', 'company'],
+    required: true,
+    default: 'college'
+  },
+  organizationName: {
+    type: String,
+    required: true
+  },
+  identifier: {
+    type: String
   },
   // Students only — must be exactly 10 characters
   usn: {

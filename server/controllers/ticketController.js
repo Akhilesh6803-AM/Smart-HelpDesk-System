@@ -40,7 +40,13 @@ const getTickets = async (req, res, next) => {
     const { status, category, priority, page = 1, limit = 10, sort = 'createdAt' } = req.query;
 
     const filter = {};
-    if (req.user.role === 'student') filter.userId = req.user._id;
+    if (req.user.role === 'student' || req.user.role === 'employee') {
+      filter.userId = req.user._id;
+    } else if (req.user.role === 'staff' || req.user.role === 'admin') {
+      const orgUsers = await User.find({ organizationName: req.user.organizationName }).select('_id');
+      const orgUserIds = orgUsers.map(u => u._id);
+      filter.userId = { $in: orgUserIds };
+    }
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
@@ -49,7 +55,7 @@ const getTickets = async (req, res, next) => {
     if (sort === 'priority') sortObj = { priority: 1, createdAt: -1 };
 
     const tickets = await Ticket.find(filter)
-      .populate('userId', 'name email role usn employeeId')
+      .populate('userId', 'name email role usn employeeId organizationName')
       .sort(sortObj)
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -77,12 +83,17 @@ const getTickets = async (req, res, next) => {
 const getTicketById = async (req, res, next) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
-      .populate('userId', 'name email role usn employeeId');
+      .populate('userId', 'name email role usn employeeId organizationName');
 
     if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
 
-    // Students can only view their own tickets
-    if (req.user.role === 'student' && ticket.userId._id.toString() !== req.user._id.toString()) {
+    // Students and employees can only view their own tickets
+    if ((req.user.role === 'student' || req.user.role === 'employee') && ticket.userId._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Staff/Admin can only view tickets from their organization
+    if ((req.user.role === 'staff' || req.user.role === 'admin') && ticket.userId.organizationName !== req.user.organizationName) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

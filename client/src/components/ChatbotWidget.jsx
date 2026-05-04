@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, TicketCheck } from 'lucide-react';
+import { X, Send, Bot, TicketCheck, MessageSquare, Sparkles } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import Lottie from 'lottie-react';
+import aiBotAnimation from '../assets/ai-bot.json';
+
+const LottieComponent = Lottie.default || Lottie;
 
 // ── Markdown-aware message renderer ──────────────────────────────────────────
 // Handles: numbered lists, bullet lists, bold (**text**), inline code, paragraphs
@@ -157,12 +161,15 @@ const ChatbotWidget = () => {
   const buildUserContext = () => {
     if (!user) return '';
     let ctx = `\n\n[LOGGED-IN USER CONTEXT]\nName: ${user.name}\nEmail: ${user.email}\nRole: ${user.role}`;
+    if (user.organizationName) ctx += `\nOrganization: ${user.organizationName}`;
+    if (user.organizationType) ctx += `\nOrganization Type: ${user.organizationType}`;
+    if (user.identifier) ctx += `\nIdentifier: ${user.identifier}`;
     if (user.usn) ctx += `\nUSN: ${user.usn}`;
     if (user.employeeId) ctx += `\nEmployee ID: ${user.employeeId}`;
     if (ticketStats) {
       ctx += `\nTicket Summary: Total=${ticketStats.total}, Open=${ticketStats.open}, In Progress=${ticketStats.inProgress}, Escalated=${ticketStats.escalated}, Closed=${ticketStats.closed}`;
     }
-    ctx += `\n\nIf the user asks about their personal details (name, email, USN, employeeId), answer directly from the context above. If the user asks about ticket counts or statuses, use the Ticket Summary. Do NOT say you don't have access to this info — you do.`;
+    ctx += `\n\nIf the user asks about their personal details (name, email, USN, identifier), answer directly from the context above. If the user asks about ticket counts or statuses, use the Ticket Summary. Do NOT say you don't have access to this info — you do. Always refer to their organization as "${user.organizationName}" when relevant.`;
     return ctx;
   };
 
@@ -211,10 +218,12 @@ const ChatbotWidget = () => {
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-40 p-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-shadow flex items-center gap-2 pr-5"
+            className="fixed bottom-6 right-6 z-40 w-[60px] h-[60px] rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-shadow flex items-center justify-center"
           >
-            <Bot size={22} />
-            <span className="text-sm font-semibold">AI Help</span>
+            <div className="relative flex items-center justify-center">
+              <MessageSquare size={28} className="text-white" strokeWidth={2.5} />
+              <Sparkles size={18} className="absolute -top-3 -right-3 text-yellow-400 fill-transparent" strokeWidth={2.5} />
+            </div>
           </motion.button>
         )}
       </AnimatePresence>
@@ -232,8 +241,8 @@ const ChatbotWidget = () => {
             {/* Header */}
             <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
-                  <Bot size={18} />
+                <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center overflow-hidden">
+                  <LottieComponent animationData={aiBotAnimation} loop={true} style={{ width: 24, height: 24 }} />
                 </div>
                 <div>
                   <p className="font-semibold text-sm leading-tight">AI HelpDesk Assistant</p>
@@ -257,8 +266,8 @@ const ChatbotWidget = () => {
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 mb-0.5">
-                      <Bot size={12} />
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 mb-0.5 overflow-hidden">
+                      <LottieComponent animationData={aiBotAnimation} loop={true} style={{ width: 18, height: 18 }} />
                     </div>
                   )}
                   <div
@@ -280,8 +289,8 @@ const ChatbotWidget = () => {
               {/* Loading dots */}
               {isLoading && (
                 <div className="flex justify-start items-end gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                    <Bot size={12} />
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 overflow-hidden">
+                    <LottieComponent animationData={aiBotAnimation} loop={true} style={{ width: 18, height: 18 }} />
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5 items-center">
                     <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

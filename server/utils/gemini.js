@@ -5,7 +5,7 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 const MAX_AI_ATTEMPTS = 4;
 
-const AI_SYSTEM_PROMPT = `You are an AI assistant for a college helpdesk.
+const AI_SYSTEM_PROMPT = `You are an AI assistant for a smart helpdesk.
 
 Rules for your response:
 1. Provide your answer strictly in a clear, numbered step-by-step format (e.g., Step 1: ..., Step 2: ...).
@@ -13,7 +13,7 @@ Rules for your response:
 3. Maximum 5 steps. If fewer steps are needed, use fewer.
 4. No emojis.
 5. Professional and friendly tone.
-6. Only answer college-related queries.
+6. Only answer queries relevant to the user's organization.
 7. If the category is "Student Welfare & Complaints" or the issue is flagged as sensitive, respond ONLY with: "This issue has been flagged as high priority and escalated to our admin team immediately."
 
 Guidelines based on category:
@@ -163,7 +163,7 @@ Write a concise 2-3 sentence summary for the admin. Include:
 const askChatbot = async (messages, userContext = '') => {
   if (!genAI) return 'AI service is currently unavailable.';
 
-  const CHATBOT_SYSTEM_PROMPT = `You are an AI assistant for the Smart Helpdesk at AMC Engineering College. You help students, staff, and visitors with college-related queries.
+  const CHATBOT_SYSTEM_PROMPT = `You are an AI assistant for the Smart Helpdesk. You help users with queries related to their organization (college or company).
 
 RESPONSE FORMAT RULES (very important):
 1. Analyze the question type FIRST, then choose the format:
@@ -184,7 +184,11 @@ TICKET GUIDANCE:
 - If a user has a technical issue, academic problem, or complaint that needs human help, ALWAYS end with: "If this doesn't help, you can raise a support ticket at the Tickets page and our staff will assist you."
 - If a user asks how to raise a ticket, say: "Go to the **Tickets** page from the navigation bar and click **New Ticket**. Fill in the title, description and category, and our AI will instantly suggest a solution."
 
-SCOPE: Only answer college-related queries (technical issues, academic matters, administrative processes, college facilities, fee payment, exams, etc.). For unrelated topics, politely redirect.
+ORGANIZATION CONTEXT:
+- If a [LOGGED-IN USER CONTEXT] section is present below, use the "Organization" field to refer to the user's specific organization.
+- If NO user context is provided (guest user), do NOT mention any specific college or company name. Respond generically (e.g., "your organization" or "your institution").
+
+SCOPE: Only answer organization-related queries (technical issues, administrative processes, facilities, HR, exams, etc.). For unrelated topics, politely redirect.
 ${userContext}`;
 
   try {

@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, GraduationCap, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, Briefcase, Building, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 import Spinner from '../components/Spinner';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [orgType, setOrgType] = useState('college');
   const [role, setRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,11 +22,16 @@ const AuthPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    usn: '',
-    employeeId: '',
     password: '',
+    organizationName: '',
     identifier: '',
+    emailOrIdentifier: '',
   });
+
+  useEffect(() => {
+    if (orgType === 'college') setRole('student');
+    else if (orgType === 'company') setRole('employee');
+  }, [orgType]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +46,7 @@ const AuthPage = () => {
   const validate = () => {
     const errors = {};
     if (isLogin) {
-      if (!formData.identifier) errors.identifier = 'Identifier is required';
+      if (!formData.emailOrIdentifier) errors.emailOrIdentifier = 'Identifier is required';
       if (!formData.password) errors.password = 'Password is required';
     } else {
       if (!formData.name) errors.name = 'Full name is required';
@@ -48,20 +54,16 @@ const AuthPage = () => {
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Enter a valid email';
       if (!formData.password) errors.password = 'Password is required';
       else if (formData.password.length < 8) errors.password = 'Min 8 characters';
-      if (role === 'student') {
-        const usnPattern = /^[0-9]{1}[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{3}$/;
-
-        if (!formData.usn) {
-          errors.usn = 'USN is required';
-        }
-        else if (formData.usn.length !== 10) {
-          errors.usn = 'USN must be exactly 10 characters';
-        }
-        else if (!usnPattern.test(formData.usn.toUpperCase())) {
-          errors.usn = 'Invalid USN format (e.g., 1AM22CS001)';
+      
+      if (!formData.organizationName) errors.organizationName = 'Organization name is required';
+      
+      if (role === 'student' || role === 'employee' || role === 'staff') {
+        if (!formData.identifier) {
+          errors.identifier = role === 'student' ? 'USN is required' : 'Employee ID is required';
+        } else if (role === 'student' && formData.identifier.length !== 10) {
+          errors.identifier = 'USN must be exactly 10 characters';
         }
       }
-      if (role === 'staff' && !formData.employeeId) errors.employeeId = 'Employee ID is required';
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -77,7 +79,7 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        await login({ identifier: formData.identifier, password: formData.password });
+        await login({ emailOrIdentifier: formData.emailOrIdentifier, password: formData.password });
         navigate('/');
       } else {
         await register({
@@ -85,11 +87,13 @@ const AuthPage = () => {
           email: formData.email,
           password: formData.password,
           role,
-          ...(role === 'student' ? { usn: formData.usn } : { employeeId: formData.employeeId }),
+          organizationType: orgType,
+          organizationName: formData.organizationName,
+          identifier: (role === 'student' || role === 'employee' || role === 'staff') ? formData.identifier : undefined,
         });
         setSuccess('Registration successful! You can now log in.');
         setIsLogin(true);
-        setFormData({ name: '', email: '', usn: '', employeeId: '', password: '', identifier: '' });
+        setFormData({ name: '', email: '', password: '', organizationName: '', identifier: '', emailOrIdentifier: '' });
         setFieldErrors({});
       }
     } catch (err) {
@@ -174,32 +178,6 @@ const AuthPage = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-3 overflow-hidden"
               >
-                {/* Role Toggle Buttons */}
-                <div className="flex gap-3 mb-1">
-                  <button
-                    type="button"
-                    onClick={() => setRole('student')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'student'
-                        ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
-                        : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
-                      }`}
-                  >
-                    <GraduationCap size={18} />
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('staff')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'staff'
-                        ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
-                        : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
-                      }`}
-                  >
-                    <Briefcase size={18} />
-                    Staff
-                  </button>
-                </div>
-
                 {/* Name */}
                 <div>
                   <input type="text" name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} className={inputClass} />
@@ -212,61 +190,171 @@ const AuthPage = () => {
                   {fieldErrors.email && <p className={fieldErrorClass}>{fieldErrors.email}</p>}
                 </div>
 
-                {/* USN or Employee ID */}
-                {role === 'student' ? (
-                  <div>
-                    <input type="text" name="usn" placeholder="USN (10 characters)" value={formData.usn} onChange={handleChange} maxLength={10} className={`${inputClass} uppercase`} />
-                    {fieldErrors.usn && <p className={fieldErrorClass}>{fieldErrors.usn}</p>}
+                {/* Password for Register */}
+                <div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`${inputClass} pr-11`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
-                ) : (
+                  {fieldErrors.password && <p className={fieldErrorClass}>{fieldErrors.password}</p>}
+                </div>
+
+                {/* Organization Type */}
+                <div>
+                  <select
+                    value={orgType}
+                    onChange={(e) => setOrgType(e.target.value)}
+                    className={`${inputClass} appearance-none bg-black/50`}
+                  >
+                    <option value="college" className="bg-[#1a1a24] text-white">College / School</option>
+                    <option value="company" className="bg-[#1a1a24] text-white">Company</option>
+                  </select>
+                </div>
+
+                {/* Organization Name */}
+                <div>
+                  <input 
+                    type="text" 
+                    name="organizationName" 
+                    placeholder={orgType === 'college' ? "College Name (e.g., AMC Engineering College)" : "Company Name (e.g., Tech Corp Inc.)"} 
+                    value={formData.organizationName} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                  />
+                  {fieldErrors.organizationName && <p className={fieldErrorClass}>{fieldErrors.organizationName}</p>}
+                </div>
+
+                {/* Role Toggle Buttons */}
+                <div className="flex gap-3 mb-1 mt-2">
+                  {orgType === 'college' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setRole('student')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'student'
+                            ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                            : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
+                          }`}
+                      >
+                        <GraduationCap size={18} />
+                        Student
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('staff')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'staff'
+                            ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                            : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
+                          }`}
+                      >
+                        <Briefcase size={18} />
+                        Staff
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setRole('employee')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'employee'
+                            ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                            : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
+                          }`}
+                      >
+                        <Users size={18} />
+                        Employee
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('admin')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-300 ${role === 'admin'
+                            ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                            : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20'
+                          }`}
+                      >
+                        <Building size={18} />
+                        Admin
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Identifier */}
+                {(role === 'student' || role === 'employee' || role === 'staff') && (
                   <div>
-                    <input type="text" name="employeeId" placeholder="Employee ID" value={formData.employeeId} onChange={handleChange} className={inputClass} />
-                    {fieldErrors.employeeId && <p className={fieldErrorClass}>{fieldErrors.employeeId}</p>}
+                    <input 
+                      type="text" 
+                      name="identifier" 
+                      placeholder={role === 'student' ? "USN (e.g., 1AM21CS001)" : "Employee ID (e.g., EMP12345)"} 
+                      value={formData.identifier} 
+                      onChange={handleChange} 
+                      className={`${inputClass} ${role === 'student' ? 'uppercase' : ''}`} 
+                      maxLength={role === 'student' ? 10 : undefined}
+                    />
+                    {fieldErrors.identifier && <p className={fieldErrorClass}>{fieldErrors.identifier}</p>}
                   </div>
                 )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Login Identifier */}
+          {/* Login Fields */}
           {isLogin && (
-            <div>
-              <motion.input
-                key="login-identifier"
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="login-fields"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                type="text"
-                name="identifier"
-                placeholder="USN / Employee ID / Email"
-                value={formData.identifier}
-                onChange={handleChange}
-                className={inputClass}
-              />
-              {fieldErrors.identifier && <p className={fieldErrorClass}>{fieldErrors.identifier}</p>}
-            </div>
-          )}
-
-          {/* Password */}
-          <div>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`${inputClass} pr-11`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors focus:outline-none"
+                exit={{ opacity: 0 }}
+                className="space-y-3"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            {fieldErrors.password && <p className={fieldErrorClass}>{fieldErrors.password}</p>}
-          </div>
+                <div>
+                  <input
+                    type="text"
+                    name="emailOrIdentifier"
+                    placeholder="Email or USN / Employee ID"
+                    value={formData.emailOrIdentifier}
+                    onChange={handleChange}
+                    className={inputClass}
+                  />
+                  {fieldErrors.emailOrIdentifier && <p className={fieldErrorClass}>{fieldErrors.emailOrIdentifier}</p>}
+                </div>
+                <div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`${inputClass} pr-11`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {fieldErrors.password && <p className={fieldErrorClass}>{fieldErrors.password}</p>}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )}
 
           {/* Submit */}
           <button

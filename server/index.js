@@ -21,9 +21,13 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.CLIENT_URL]
+  : [/^http:\/\/localhost:\d+$/]; // allow any localhost port in dev
+
 app.use(
   cors({
-    origin:      process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true, // allow cookies to be sent cross-origin
   })
 );

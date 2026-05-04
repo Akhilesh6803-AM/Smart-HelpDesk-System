@@ -31,20 +31,27 @@ const sendTokenCookie = (res, userId, role) => {
  */
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role, usn, employeeId } = req.body;
+    const { name, email, password, role, organizationType, organizationName, identifier } = req.body;
 
     // ── Basic validation ──
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ success: false, message: 'name, email, password, and role are required.' });
+    if (!name || !email || !password || !role || !organizationType || !organizationName) {
+      return res.status(400).json({ success: false, message: 'name, email, password, role, organizationType, and organizationName are required.' });
     }
 
     const trimmedName     = name.trim();
     const trimmedEmail    = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     const trimmedRole     = role.trim().toLowerCase();
+    const trimmedOrgType  = organizationType.trim().toLowerCase();
+    const trimmedOrgName  = organizationName.trim();
+    const trimmedIdentifier = identifier ? identifier.trim() : undefined;
 
-    if (!['student', 'staff'].includes(trimmedRole)) {
-      return res.status(400).json({ success: false, message: 'Role must be "student" or "staff". Admins are created via the seed script.' });
+    if (!['college', 'company'].includes(trimmedOrgType)) {
+      return res.status(400).json({ success: false, message: 'organizationType must be "college" or "company".' });
+    }
+
+    if (!['student', 'staff', 'admin', 'employee'].includes(trimmedRole)) {
+      return res.status(400).json({ success: false, message: 'Invalid role.' });
     }
 
     if (trimmedPassword.length < 8) {
@@ -52,22 +59,31 @@ const register = async (req, res, next) => {
     }
 
     // ── Role-specific field checks ──
-    if (trimmedRole === 'student') {
-      if (!usn || usn.trim().length !== 10) {
-        return res.status(400).json({ success: false, message: 'USN is required for students and must be exactly 10 characters.' });
+    if (trimmedRole === 'student' || trimmedRole === 'employee' || trimmedRole === 'staff') {
+      if (!trimmedIdentifier) {
+        return res.status(400).json({ success: false, message: 'Identifier is required for this role.' });
       }
     }
 
-    if (trimmedRole === 'staff') {
-      if (!employeeId || !employeeId.trim()) {
-        return res.status(400).json({ success: false, message: 'employeeId is required for staff.' });
-      }
+    if (trimmedOrgType === 'college' && !['student', 'staff'].includes(trimmedRole)) {
+      return res.status(400).json({ success: false, message: 'For college, role must be student or staff.' });
+    }
+
+    if (trimmedOrgType === 'company' && !['employee', 'admin'].includes(trimmedRole)) {
+      return res.status(400).json({ success: false, message: 'For company, role must be employee or admin.' });
     }
 
     // ── Duplicate check ──
     const existingUser = await User.findOne({ email: trimmedEmail });
     if (existingUser) {
       return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+    }
+
+    if (trimmedIdentifier) {
+      const existingIdentifier = await User.findOne({ organizationType: trimmedOrgType, identifier: trimmedIdentifier });
+      if (existingIdentifier) {
+        return res.status(409).json({ success: false, message: 'An account with this identifier already exists in this organization.' });
+      }
     }
 
     // ── Hash password ──
@@ -79,19 +95,25 @@ const register = async (req, res, next) => {
       email: trimmedEmail,
       password: hashedPassword,
       role: trimmedRole,
+      organizationType: trimmedOrgType,
+      organizationName: trimmedOrgName,
+      identifier: trimmedIdentifier
     };
 
-    if (trimmedRole === 'student') {
-      userData.usn = usn.trim().toUpperCase();
-    } else if (trimmedRole === 'staff') {
-      userData.employeeId = employeeId.trim();
-    }
-
-    await User.create(userData);
+    const newUser = await User.create(userData);
 
     return res.status(201).json({
       success: true,
       message: 'Account created successfully. Please log in.',
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        organizationType: newUser.organizationType,
+        organizationName: newUser.organizationName,
+        identifier: newUser.identifier
+      }
     });
   } catch (err) {
     // Mongoose duplicate key error
@@ -109,22 +131,22 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
   try {
-    const { identifier, password } = req.body;
+    const { emailOrIdentifier, password } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ success: false, message: 'identifier and password are required.' });
+    if (!emailOrIdentifier || !password) {
+      return res.status(400).json({ success: false, message: 'emailOrIdentifier and password are required.' });
     }
 
-    const trimmedId  = identifier.trim();
+    const trimmedId  = emailOrIdentifier.trim();
     const trimmedPwd = password.trim();
 
-    // Search by email, USN, or employeeId
     const user = await User.findOne({
       $or: [
         { email: trimmedId.toLowerCase() },
+        { identifier: trimmedId },
         { usn: trimmedId.toUpperCase() },
-        { employeeId: trimmedId },
-      ],
+        { employeeId: trimmedId }
+      ]
     });
 
     if (!user) {
@@ -147,6 +169,9 @@ const login = async (req, res, next) => {
         name:  user.name,
         email: user.email,
         role:  user.role,
+        organizationType: user.organizationType,
+        organizationName: user.organizationName,
+        identifier: user.identifier || user.usn || user.employeeId
       },
     });
   } catch (err) {
@@ -172,10 +197,10 @@ const logout = (req, res) => {
  * Returns the currently authenticated user (requires protect middleware).
  */
 const getMe = (req, res) => {
-  const { _id, name, email, role, usn, employeeId, createdAt } = req.user;
+  const { _id, name, email, role, organizationType, organizationName, identifier, usn, employeeId, createdAt } = req.user;
   return res.status(200).json({
     success: true,
-    user: { _id, name, email, role, usn, employeeId, createdAt },
+    user: { _id, name, email, role, organizationType, organizationName, identifier: identifier || usn || employeeId, createdAt },
   });
 };
 
