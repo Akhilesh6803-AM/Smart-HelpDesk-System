@@ -42,7 +42,10 @@ export const AuthProvider = ({ children }) => {
       await api.post('/auth/logout');
     } finally {
       setUser(null);
-      window.location.href = '/auth';
+      // Do NOT use window.location.href here — the Vite proxy for /auth
+      // would intercept that request and send it to Express (returning JSON).
+      // Instead, just clear user state; ProtectedRoute will redirect to /auth
+      // automatically via React Router <Navigate>.
     }
   };
 

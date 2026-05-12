@@ -43,9 +43,15 @@ const getTickets = async (req, res, next) => {
     if (req.user.role === 'student' || req.user.role === 'employee') {
       filter.userId = req.user._id;
     } else if (req.user.role === 'staff' || req.user.role === 'admin') {
-      const orgUsers = await User.find({ organizationName: req.user.organizationName }).select('_id');
-      const orgUserIds = orgUsers.map(u => u._id);
-      filter.userId = { $in: orgUserIds };
+      if (req.user.organizationName) {
+        // Case-insensitive match for organizationName
+        const orgUsers = await User.find({ 
+          organizationName: { $regex: new RegExp('^' + req.user.organizationName + '$', 'i') } 
+        }).select('_id');
+        const orgUserIds = orgUsers.map(u => u._id);
+        filter.userId = { $in: orgUserIds };
+      }
+      // If admin has no organizationName (e.g., super admin), they see ALL tickets
     }
     if (status) filter.status = status;
     if (category) filter.category = category;
@@ -92,9 +98,12 @@ const getTicketById = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Staff/Admin can only view tickets from their organization
-    if ((req.user.role === 'staff' || req.user.role === 'admin') && ticket.userId.organizationName !== req.user.organizationName) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+    // Staff/Admin can only view tickets from their organization (if they belong to one)
+    if ((req.user.role === 'staff' || req.user.role === 'admin') && req.user.organizationName) {
+      const ticketOrg = ticket.userId.organizationName || '';
+      if (ticketOrg.toLowerCase() !== req.user.organizationName.toLowerCase()) {
+        return res.status(403).json({ success: false, message: 'Not authorized' });
+      }
     }
 
     return res.status(200).json({ success: true, ticket });

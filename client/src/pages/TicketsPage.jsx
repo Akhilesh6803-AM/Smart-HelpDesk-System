@@ -74,13 +74,15 @@ const TicketsPage = () => {
     }
   };
 
-  // Apply filters
-  const filteredTickets = tickets.filter((t) => {
-    const matchStatus = filterStatus === 'All' || t.status === filterStatus;
-    const matchCategory = filterCategory === 'All' || t.category === filterCategory;
-    const matchPriority = filterPriority === 'All' || t.priority === filterPriority;
-    return matchStatus && matchCategory && matchPriority;
-  });
+  // Apply filters then sort newest first
+  const filteredTickets = tickets
+    .filter((t) => {
+      const matchStatus = filterStatus === 'All' || t.status === filterStatus;
+      const matchCategory = filterCategory === 'All' || t.category === filterCategory;
+      const matchPriority = filterPriority === 'All' || t.priority === filterPriority;
+      return matchStatus && matchCategory && matchPriority;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
