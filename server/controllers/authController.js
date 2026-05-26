@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,10 @@ const register = async (req, res, next) => {
     // ── Hash password ──
     const hashedPassword = await bcrypt.hash(trimmedPassword, SALT_ROUNDS);
 
+    // ── Generate OTP ──
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
     // ── Build user document ──
     const userData = {
       name: trimmedName,
@@ -97,14 +102,28 @@ const register = async (req, res, next) => {
       role: trimmedRole,
       organizationType: trimmedOrgType,
       organizationName: trimmedOrgName,
-      identifier: trimmedIdentifier
+      identifier: trimmedIdentifier,
+      otp,
+      otpExpires
     };
 
     const newUser = await User.create(userData);
 
+    // ── Send Email ──
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Verify Your Email</h2>
+        <p>Hello ${newUser.name},</p>
+        <p>Your OTP for registration is: <strong>${otp}</strong></p>
+        <p>This OTP will expire in 5 minutes.</p>
+        <p>Thank you.</p>
+      </div>
+    `;
+    await sendEmail({ to: newUser.email, subject: 'Smart Helpdesk - Email Verification', html });
+
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully. Please log in.',
+      message: 'Account created. Please verify your OTP sent to your email.',
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -156,6 +175,14 @@ const login = async (req, res, next) => {
     const isMatch = await bcrypt.compare(trimmedPwd, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    }
+
+    if (!user.isVerified && user.role !== 'admin') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Please verify your email to continue.',
+        email: user.email 
+      });
     }
 
     // Set JWT in httpOnly cookie — never send in body
@@ -230,6 +257,7 @@ const seedAdmin = async (req, res, next) => {
       password: hashedPassword,
       role: 'admin',
       employeeId: employeeId ? employeeId.trim() : undefined,
+      isVerified: true,
     });
 
     return res.status(201).json({
@@ -246,4 +274,85 @@ const seedAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, logout, getMe, seedAdmin };
+/**
+ * POST /auth/verify-otp
+ */
+const verifyOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required.' });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified.' });
+    }
+
+    if (user.otp !== otp.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP.' });
+    }
+
+    if (new Date() > user.otpExpires) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'OTP verified successfully. You can now log in.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /auth/resend-otp
+ */
+const resendOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified.' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Verify Your Email</h2>
+        <p>Hello ${user.name},</p>
+        <p>Your new OTP for registration is: <strong>${otp}</strong></p>
+        <p>This OTP will expire in 5 minutes.</p>
+        <p>Thank you.</p>
+      </div>
+    `;
+    await sendEmail({ to: user.email, subject: 'Smart Helpdesk - New Email Verification OTP', html });
+
+    return res.status(200).json({ success: true, message: 'A new OTP has been sent to your email.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, logout, getMe, seedAdmin, verifyOTP, resendOTP };

@@ -8,6 +8,7 @@ import Spinner from '../components/Spinner';
 import { useAuth } from '../context/AuthContext';
 import { MessageSquare, AlertTriangle, Search, Filter, Trash2, Edit, Plus, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 
+
 // ==========================================
 // TICKET SECTION
 // ==========================================
@@ -94,8 +95,38 @@ const AllTicketsSection = () => {
 
   if (loading) return <div className="py-20 flex justify-center"><Spinner size="lg" /></div>;
 
+  const priorityData = [
+    { name: 'Low', count: tickets.filter(t => t.priority === 'Low').length, color: '#10B981' },
+    { name: 'Medium', count: tickets.filter(t => t.priority === 'Medium').length, color: '#F59E0B' },
+    { name: 'High', count: tickets.filter(t => t.priority === 'High').length, color: '#EF4444' },
+    { name: 'Critical', count: tickets.filter(t => t.priority === 'Critical').length, color: '#991B1B' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Priority Graph */}
+      <div className="glass-card p-6 rounded-xl border border-white/10 mb-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Tickets by Priority</h3>
+        <div className="flex items-end h-48 gap-2 sm:gap-6 pt-4 border-b border-white/10 relative">
+          {priorityData.map((item, index) => {
+            const maxCount = Math.max(1, ...priorityData.map(d => d.count));
+            const heightPercent = (item.count / maxCount) * 100;
+            return (
+              <div key={index} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group relative">
+                <span className="text-xs font-bold text-white bg-black/50 px-2 py-1 rounded absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  {item.count} Ticket{item.count !== 1 ? 's' : ''}
+                </span>
+                <div 
+                  className="w-full max-w-[80px] rounded-t-md transition-all duration-500 shadow-lg cursor-pointer"
+                  style={{ height: `${Math.max(2, heightPercent)}%`, backgroundColor: item.color }}
+                ></div>
+                <span className="text-xs sm:text-sm font-medium text-gray-300 mt-2">{item.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-2xl font-bold text-white">All Tickets</h2>
         <div className="flex gap-3 w-full sm:w-auto">

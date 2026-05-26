@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { register, login, logout, getMe, seedAdmin } = require('../controllers/authController');
+const { register, login, logout, getMe, seedAdmin, verifyOTP, resendOTP } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -24,5 +24,7 @@ router.post('/login',      login);
 router.post('/logout',     logout);
 router.get('/me',          protect, getMe);
 router.post('/seed-admin', seedAdmin);
+router.post('/verify-otp', verifyOTP);
+router.post('/resend-otp', resendOTP);
 
 module.exports = router;

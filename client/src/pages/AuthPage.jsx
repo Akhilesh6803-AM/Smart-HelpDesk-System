@@ -15,8 +15,11 @@ const AuthPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isOtpMode, setIsOtpMode] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
-  const { login, register } = useAuth();
+  const { login, register, verifyOTP, resendOTP } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -91,13 +94,56 @@ const AuthPage = () => {
           organizationName: formData.organizationName,
           identifier: (role === 'student' || role === 'employee' || role === 'staff') ? formData.identifier : undefined,
         });
-        setSuccess('Registration successful! You can now log in.');
-        setIsLogin(true);
+        setSuccess('Account created. Please verify your email.');
+        setOtpEmail(formData.email);
+        setIsOtpMode(true);
         setFormData({ name: '', email: '', password: '', organizationName: '', identifier: '', emailOrIdentifier: '' });
         setFieldErrors({});
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      if (err.response?.data?.message === 'Please verify your email to continue.') {
+        setOtpEmail(err.response.data.email);
+        setIsOtpMode(true);
+        setError('Please verify your email to continue.');
+      } else {
+        setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.length !== 6) {
+      setError('Please enter a valid 6-digit OTP.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await verifyOTP({ email: otpEmail, otp: otpCode });
+      setSuccess('Email verified successfully! You can now log in.');
+      setIsOtpMode(false);
+      setIsLogin(true);
+      setOtpCode('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await resendOTP({ email: otpEmail });
+      setSuccess('A new OTP has been sent to your email.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP.');
     } finally {
       setLoading(false);
     }
@@ -134,26 +180,28 @@ const AuthPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex p-1 bg-black/30 rounded-xl mb-5">
-          <button
-            onClick={() => { setIsLogin(true); setError(''); setSuccess(''); setFieldErrors({}); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isLogin
-                ? 'bg-white/10 shadow-md text-primary'
-                : 'text-gray-400 hover:text-gray-200'
-              }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => { setIsLogin(false); setError(''); setSuccess(''); setFieldErrors({}); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${!isLogin
-                ? 'bg-white/10 shadow-md text-primary'
-                : 'text-gray-400 hover:text-gray-200'
-              }`}
-          >
-            Register
-          </button>
-        </div>
+        {!isOtpMode && (
+          <div className="flex p-1 bg-black/30 rounded-xl mb-5">
+            <button
+              onClick={() => { setIsLogin(true); setError(''); setSuccess(''); setFieldErrors({}); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isLogin
+                  ? 'bg-white/10 shadow-md text-primary'
+                  : 'text-gray-400 hover:text-gray-200'
+                }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => { setIsLogin(false); setError(''); setSuccess(''); setFieldErrors({}); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${!isLogin
+                  ? 'bg-white/10 shadow-md text-primary'
+                  : 'text-gray-400 hover:text-gray-200'
+                }`}
+            >
+              Register
+            </button>
+          </div>
+        )}
 
         {/* Alerts */}
         {success && (
@@ -167,9 +215,50 @@ const AuthPage = () => {
           </motion.div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <AnimatePresence mode="wait">
-            {!isLogin && (
+        {isOtpMode ? (
+          <form onSubmit={handleVerifyOTP} className="space-y-3">
+            <div>
+              <p className="text-gray-300 text-sm mb-4 text-center">
+                We've sent a 6-digit code to <strong>{otpEmail}</strong>. Please enter it below.
+              </p>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="6-digit OTP"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                className={`${inputClass} text-center tracking-widest text-lg font-bold`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3 px-4 flex justify-center items-center h-11 text-sm mt-6"
+            >
+              {loading ? <Spinner size="sm" /> : 'Verify Email'}
+            </button>
+            <div className="flex justify-between items-center mt-4 px-1">
+              <button
+                type="button"
+                onClick={() => { setIsOtpMode(false); setError(''); setSuccess(''); }}
+                className="text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                Back to Login
+              </button>
+              <button
+                type="button"
+                onClick={handleResendOTP}
+                disabled={loading}
+                className="text-blue-500 hover:text-blue-400 text-sm font-medium transition-colors"
+              >
+                Resend Code
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <AnimatePresence mode="wait">
+              {!isLogin && (
               <motion.div
                 key="register-fields"
                 initial={{ opacity: 0, height: 0 }}
@@ -365,15 +454,18 @@ const AuthPage = () => {
             {loading ? <Spinner size="sm" /> : isLogin ? 'Login' : 'Create Account'}
           </button>
         </form>
+        )}
 
         {/* Footer hint */}
-        <p className="text-center text-xs text-gray-500 mt-5">
-          {isLogin ? (
-            <>Don't have an account?{' '}<button onClick={() => { setIsLogin(false); setError(''); setFieldErrors({}); }} className="text-blue-500 hover:text-blue-600 font-medium">Register</button></>
-          ) : (
-            <>Already have an account?{' '}<button onClick={() => { setIsLogin(true); setError(''); setFieldErrors({}); }} className="text-blue-500 hover:text-blue-600 font-medium">Login</button></>
-          )}
-        </p>
+        {!isOtpMode && (
+          <p className="text-center text-xs text-gray-500 mt-5">
+            {isLogin ? (
+              <>Don't have an account?{' '}<button onClick={() => { setIsLogin(false); setError(''); setFieldErrors({}); }} className="text-blue-500 hover:text-blue-600 font-medium">Register</button></>
+            ) : (
+              <>Already have an account?{' '}<button onClick={() => { setIsLogin(true); setError(''); setFieldErrors({}); }} className="text-blue-500 hover:text-blue-600 font-medium">Login</button></>
+            )}
+          </p>
+        )}
       </motion.div>
     </div>
   );
