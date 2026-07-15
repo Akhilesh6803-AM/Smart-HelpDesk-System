@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express      = require('express');
 const cors         = require('cors');
@@ -94,4 +94,3 @@ const startServer = async () => {
 };
 
 startServer();
-// Trigger nodemon restart 2
