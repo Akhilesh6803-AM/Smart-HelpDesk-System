@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Use relative URLs so ALL requests go through the Vite dev proxy on port 3000.
-// In production, set VITE_API_URL to your deployed backend URL.
+// In development: use empty baseURL so requests go through Vite dev proxy on port 3000
+// In production: use VITE_API_URL environment variable (e.g., https://smart-helpdesk-system.onrender.com)
 const api = axios.create({
-  baseURL: import.meta.env.MODE === 'development' ? '' : (import.meta.env.VITE_API_URL || ''),
+  baseURL: import.meta.env.MODE === 'development' ? '' : import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
 

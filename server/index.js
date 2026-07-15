@@ -22,7 +22,7 @@ app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CLIENT_URL]
+  ? [process.env.CLIENT_URL || 'https://smart-help-desk-system.vercel.app']
   : [/^http:\/\/localhost:\d+$/]; // allow any localhost port in dev
 
 app.use(
