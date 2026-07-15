@@ -254,8 +254,8 @@ const resolveTicket = async (req, res, next) => {
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
 
-    // Only the ticket owner can self-resolve
-    if (ticket.userId.toString() !== req.user._id.toString()) {
+    const ownerId = ticket.userId._id ? ticket.userId._id.toString() : ticket.userId.toString();
+    if (ownerId !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -281,7 +281,8 @@ const escalateTicket = async (req, res, next) => {
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
 
-    if (ticket.userId.toString() !== req.user._id.toString()) {
+    const ownerId = ticket.userId._id ? ticket.userId._id.toString() : ticket.userId.toString();
+    if (ownerId !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

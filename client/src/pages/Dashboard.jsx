@@ -213,6 +213,10 @@ const Dashboard = () => {
           ticket={selectedTicket} 
           isOpen={!!selectedTicket} 
           onClose={() => setSelectedTicket(null)} 
+          onTicketUpdate={(updatedTicket) => {
+            setTickets(prev => prev.map(t => t._id === updatedTicket._id ? updatedTicket : t));
+            setSelectedTicket(updatedTicket);
+          }}
         />
       </div>
     </div>
