@@ -22,7 +22,7 @@ app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CLIENT_URL || 'https://smart-help-desk-system.vercel.app']
+  ? [process.env.CLIENT_URL || 'https://smart-help-desk-system.vercel.app', /\.vercel\.app$/]
   : [/^http:\/\/localhost:\d+$/]; // allow any localhost port in dev
 
 app.use(
@@ -80,17 +80,28 @@ const startServer = async () => {
       throw new Error('MONGODB_URI is not defined in environment variables.');
     }
 
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅  Connected to MongoDB');
+    // In a serverless environment (like Vercel), we must avoid reconnecting
+    // if a connection already exists.
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('✅  Connected to MongoDB');
+    }
 
-    app.listen(PORT, () => {
-      console.log(`🚀  Smart Helpdesk server running on http://localhost:${PORT}`);
-      console.log(`🌍  Accepting requests from: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      app.listen(PORT, () => {
+        console.log(`🚀  Smart Helpdesk server running on http://localhost:${PORT}`);
+        console.log(`🌍  Accepting requests from: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+      });
+    }
   } catch (err) {
     console.error('❌  Failed to start server:', err.message);
-    process.exit(1);
+    // Don't exit process in serverless environment
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }
 };
 
 startServer();
+// Export the app for Vercel Serverless Functions
+module.exports = app;

@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "server/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/auth/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/tickets/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/ai/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/notifications/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/notices/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/faqs/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/users/(.*)",
+      "destination": "/server/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
