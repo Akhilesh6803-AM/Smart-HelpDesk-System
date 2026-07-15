@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express      = require('express');
 const cors         = require('cors');
@@ -22,7 +22,7 @@ app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CLIENT_URL]
+  ? [process.env.CLIENT_URL || 'https://smart-help-desk-system.vercel.app']
   : [/^http:\/\/localhost:\d+$/]; // allow any localhost port in dev
 
 app.use(
@@ -94,4 +94,3 @@ const startServer = async () => {
 };
 
 startServer();
-// Trigger nodemon restart 2
