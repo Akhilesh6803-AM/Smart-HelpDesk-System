@@ -69,7 +69,7 @@ const updateUser = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
       }
 
-      user.password = await bcrypt.hash(password, 12);
+      user.password = await bcrypt.hash(password, 10);
     }
 
     // Update other fields

@@ -5,7 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = 10;
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 /**
