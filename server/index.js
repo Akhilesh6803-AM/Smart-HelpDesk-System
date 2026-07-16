@@ -87,12 +87,10 @@ const startServer = async () => {
       console.log('✅  Connected to MongoDB');
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      app.listen(PORT, () => {
-        console.log(`🚀  Smart Helpdesk server running on http://localhost:${PORT}`);
-        console.log(`🌍  Accepting requests from: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
-      });
-    }
+    app.listen(PORT, () => {
+      console.log(`🚀  Smart Helpdesk server running on port ${PORT}`);
+      console.log(`🌍  Accepting requests from: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+    });
   } catch (err) {
     console.error('❌  Failed to start server:', err.message);
     // Don't exit process in serverless environment
