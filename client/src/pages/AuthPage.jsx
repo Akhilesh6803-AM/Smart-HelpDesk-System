@@ -94,11 +94,7 @@ const AuthPage = () => {
           organizationName: formData.organizationName,
           identifier: (role === 'student' || role === 'employee' || role === 'staff') ? formData.identifier : undefined,
         });
-        setSuccess('Account created. Please verify your email.');
-        setOtpEmail(formData.email);
-        setIsOtpMode(true);
-        setFormData({ name: '', email: '', password: '', organizationName: '', identifier: '', emailOrIdentifier: '' });
-        setFieldErrors({});
+        navigate('/');
       }
     } catch (err) {
       if (err.response?.data?.message === 'Please verify your email to continue.') {

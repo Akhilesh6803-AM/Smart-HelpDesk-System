@@ -90,10 +90,6 @@ const register = async (req, res, next) => {
     // ── Hash password ──
     const hashedPassword = await bcrypt.hash(trimmedPassword, SALT_ROUNDS);
 
-    // ── Generate OTP ──
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
     // ── Build user document ──
     const userData = {
       name: trimmedName,
@@ -103,29 +99,19 @@ const register = async (req, res, next) => {
       organizationType: trimmedOrgType,
       organizationName: trimmedOrgName,
       identifier: trimmedIdentifier,
-      otp,
-      otpExpires
+      isVerified: true
     };
 
     const newUser = await User.create(userData);
 
-    // ── Send Email ──
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Verify Your Email</h2>
-        <p>Hello ${newUser.name},</p>
-        <p>Your OTP for registration is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 5 minutes.</p>
-        <p>Thank you.</p>
-      </div>
-    `;
-    await sendEmail({ to: newUser.email, subject: 'Smart Helpdesk - Email Verification', html });
+    // Set JWT in httpOnly cookie — auto login the user
+    sendTokenCookie(res, newUser._id, newUser.role);
 
     return res.status(201).json({
       success: true,
-      message: 'Account created. Please verify your OTP sent to your email.',
+      message: 'Account created and logged in successfully.',
       user: {
-        id: newUser._id,
+        _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
