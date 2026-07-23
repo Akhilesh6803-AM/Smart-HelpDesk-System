@@ -94,7 +94,7 @@ const AuthPage = () => {
           organizationName: formData.organizationName,
           identifier: (role === 'student' || role === 'employee' || role === 'staff') ? formData.identifier : undefined,
         });
-        navigate('/');
+        navigate('/login');
       }
     } catch (err) {
       if (err.response?.data?.message === 'Please verify your email to continue.') {

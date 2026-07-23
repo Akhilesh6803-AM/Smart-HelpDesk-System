@@ -104,8 +104,7 @@ const register = async (req, res, next) => {
 
     const newUser = await User.create(userData);
 
-    // Set JWT in httpOnly cookie — auto login the user
-    sendTokenCookie(res, newUser._id, newUser.role);
+    // Registration completed; user must login manually
 
     return res.status(201).json({
       success: true,

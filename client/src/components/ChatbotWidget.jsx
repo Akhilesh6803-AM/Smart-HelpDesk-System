@@ -121,7 +121,7 @@ const ChatbotWidget = () => {
       role: 'assistant',
       content: user
         ? `Hi ${user.name?.split(' ')[0]}! 👋 I'm your AI HelpDesk assistant. I can help with technical issues, college queries, and answer questions about your account. What do you need help with?`
-        : `Hi! 👋 I'm the Smart Helpdesk AI assistant. How can I help you today?`,
+        : `Hi! 👋 I'm the Smart Helpdesk AI assistant. Please **Register** or **Login** to start chatting with me and to raise support tickets!`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -180,6 +180,20 @@ const ChatbotWidget = () => {
     setInput('');
     const newMessages = [...messages, { role: 'user', content: text }];
     setMessages(newMessages);
+
+    if (!user) {
+      setTimeout(() => {
+        setMessages([
+          ...newMessages,
+          {
+            role: 'assistant',
+            content: 'It looks like you are not logged in!\n\nPlease **Register** and **Login** to use the AI assistant and raise support tickets.\n\nOnce you are logged in, I can help you with:\n- Answering technical queries\n- Raising support tickets\n- Checking your ticket status\n\nHead over to the Login page to get started!',
+          },
+        ]);
+      }, 600);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
